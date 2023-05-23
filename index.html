@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js"></script>
+  </head>
+  <body>
+    <button onclick="abrirCamara()">Leer OCR</button>
+    <div id="resultadoElement"></div>
+
+    <video id="videoElement" width="640" height="480"></video>
+  </body>
+  <script>
+    function abrirCamara() {
+      const videoElement = document.getElementById("videoElement");
+      const resultadoElement = document.getElementById("resultadoElement");
+
+      // Verificar si la API de MediaDevices es compatible en el navegador
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        // Solicitar permiso para acceder a la cámara
+        navigator.mediaDevices
+          .getUserMedia({ video: true })
+          .then(function (stream) {
+            // Mostrar la transmisión de video en el elemento de video
+            videoElement.srcObject = stream;
+            videoElement.play();
+
+            // Configurar el reconocimiento OCR con Tesseract.js
+            const worker = Tesseract.createWorker();
+            console.log(worker.load());
+            // Cargar el modelo OCR
+            worker
+              .load()
+              .then(() => {
+                // Iniciar el reconocimiento OCR en cada frame del video
+                setInterval(() => {
+                  // Capturar el contenido del video en un lienzo (canvas)
+                  const canvas = document.createElement("canvas");
+                  const context = canvas.getContext("2d");
+                  canvas.width = videoElement.videoWidth;
+                  canvas.height = videoElement.videoHeight;
+                  context.drawImage(
+                    videoElement,
+                    0,
+                    0,
+                    canvas.width,
+                    canvas.height
+                  );
+
+                  // Obtener la imagen del lienzo en formato de datos base64
+                  const imageData = canvas.toDataURL("image/jpeg");
+
+                  // Realizar el reconocimiento OCR en la imagen
+                  worker
+                    .recognize(imageData)
+                    .then(({ data: { text } }) => {
+                      // Mostrar el resultado del OCR en un elemento HTML
+                      resultadoElement.innerText = text;
+                    })
+                    .catch((error) => {
+                      console.log("Error en OCR:", error);
+                    });
+                }, 1000); // Intervalo de 1 segundo (ajusta según tus necesidades)
+              })
+              .catch((error) => {
+                console.log("Error al cargar el modelo OCR:", error);
+              });
+          })
+          .catch(function (error) {
+            console.log("Error al acceder a la cámara: ", error);
+          });
+      } else {
+        console.log(
+          "La API de MediaDevices no es compatible en este navegador."
+        );
+      }
+    }
+  </script>
+</html>
